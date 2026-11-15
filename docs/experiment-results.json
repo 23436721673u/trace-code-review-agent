@@ -1,0 +1,29 @@
+{
+  "scope": "curated fixtures only, no real model evaluation",
+  "recipes": {
+    "booking": {
+      "baseline": 4,
+      "partial": 10,
+      "complete": 12,
+      "total": 12,
+      "mutants_detected": 3,
+      "mutants_total": 3
+    },
+    "xueku": {
+      "baseline": 6,
+      "partial": 9,
+      "complete": 12,
+      "total": 12,
+      "mutants_detected": 3,
+      "mutants_total": 3
+    },
+    "leaderboard": {
+      "baseline": 4,
+      "partial": 9,
+      "complete": 12,
+      "total": 12,
+      "mutants_detected": 3,
+      "mutants_total": 3
+    }
+  }
+}

@@ -1,0 +1,5 @@
+export function reportMarkdown(r){
+  const lines=[`# TRACE 代码审查报告`, ``, `- 项目：${r.project}`,`- 报告：${r.id}`,`- 时间：${r.created_at}`,`- 状态：${r.status}`,`- 模型：${r.models.join(', ')||'未完成模型审查'}`,`- 只读：是；未执行或修改源码`, ``,r.summary.release_advice,``,`## 范围`,`静态检查 ${r.coverage.static_files} 个文件；模型完成 ${r.coverage.model_files} 个文件（含部分片段 ${r.coverage.model_partial_files} 个）。`,``,...r.warnings.map(w=>`> ${w}`),``,`## 发现项（需人工复核）`];
+  for(const f of r.findings){lines.push(``,`### [${f.severity.toUpperCase()}] ${f.title}`,``,`- 位置：${f.file}:${f.line}`,`- 类型：${f.category} / ${f.cwe||'未分类'} / ${f.origin}`,`- 置信度：${f.confidence}`,`- 前提：${f.preconditions}`,``,`代码依据：`,``, '```text',f.evidence,'```',``,`影响：${f.impact}`,``,`建议：${f.model_analysis?.recommendation||f.recommendation}`,``,`验证：${f.model_analysis?.verification||f.verification}`);}
+  lines.push(``,`## 文件覆盖`,...r.coverage.files.map(f=>`- ${f.path}：静态 ${f.static}；模型 ${f.model}；范围 ${f.ranges.map(([a,b])=>`${a}-${b}`).join(',')||'无'}`),``,`## 边界`,...r.limitations.map(l=>`- ${l}`));return lines.join('\n');
+}

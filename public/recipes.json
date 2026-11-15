@@ -1,0 +1,59 @@
+{
+  "booking": {
+    "name": "校园空间 · 预约冲突修复", "short": "校园预约", "description": "验证预约策略中的时间边界、操作权限与非法时段。使用固定已有预约 [10,12) 的独立示例。", "tags": ["BOUNDARY", "AUTHORIZATION", "REGRESSION"], "file": "policies.py",
+    "requirements": [{"id":"R1","name":"相邻时段可约，重叠时段拦截","method":"区间边界测试","function":"check_overlap"},{"id":"R2","name":"仅本人或管理员可操作","method":"角色矩阵测试","function":"check_identity"},{"id":"R3","name":"拒绝倒置、越界与空时段","method":"非法输入测试","function":"validate_slot"}],
+    "cases": [
+      {"id":"T01","req":"R1","name":"前一预约结束时可开始","input":{"start":12,"end":14,"actor":"alice","owner":"alice","role":"student"},"expected":true},
+      {"id":"T02","req":"R1","name":"后一预约开始前可结束","input":{"start":8,"end":10,"actor":"alice","owner":"alice","role":"student"},"expected":true},
+      {"id":"T03","req":"R1","name":"部分重叠应被拒绝","input":{"start":11,"end":13,"actor":"alice","owner":"alice","role":"student"},"expected":false},
+      {"id":"T04","req":"R1","name":"完全包含应被拒绝","input":{"start":9,"end":13,"actor":"alice","owner":"alice","role":"student"},"expected":false},
+      {"id":"T05","req":"R2","name":"本人可以操作","input":{"start":14,"end":16,"actor":"alice","owner":"alice","role":"student"},"expected":true},
+      {"id":"T06","req":"R2","name":"他人不能操作","input":{"start":14,"end":16,"actor":"bob","owner":"alice","role":"student"},"expected":false},
+      {"id":"T07","req":"R2","name":"管理员可以操作","input":{"start":14,"end":16,"actor":"admin","owner":"alice","role":"admin"},"expected":true},
+      {"id":"T08","req":"R2","name":"匿名身份不能操作","input":{"start":14,"end":16,"actor":"","owner":"alice","role":"guest"},"expected":false},
+      {"id":"T09","req":"R3","name":"拒绝零长度时段","input":{"start":15,"end":15,"actor":"alice","owner":"alice","role":"student"},"expected":false},
+      {"id":"T10","req":"R3","name":"拒绝倒置时段","input":{"start":18,"end":15,"actor":"alice","owner":"alice","role":"student"},"expected":false},
+      {"id":"T11","req":"R3","name":"拒绝负数时段","input":{"start":-2,"end":-1,"actor":"alice","owner":"alice","role":"student"},"expected":false},
+      {"id":"T12","req":"R3","name":"拒绝超出当天时段","input":{"start":25,"end":27,"actor":"alice","owner":"alice","role":"student"},"expected":false}
+    ],
+    "mutations": [{"id":"no-auth","name":"移除身份校验","requirement":"R2","description":"如果允许任意人操作别人的预约？"},{"id":"boundary","name":"回退区间边界","requirement":"R1","description":"如果把相邻时段也当成冲突？"},{"id":"no-validation","name":"绕过输入校验","requirement":"R3","description":"如果允许空时段和越界时间？"}]
+  },
+  "xueku": {
+    "name": "学库 XueKu · 课程权限验证", "short": "学库权限", "description": "以学库方向构造的独立示例：验证草稿可见性、登录状态和多租户边界，不连接原项目。", "tags": ["ACCESS CONTROL", "TENANT ISOLATION", "XUEKU"], "file": "policies.py",
+    "requirements": [{"id":"R1","name":"草稿仅作者或管理员可见","method":"可见性矩阵测试","function":"check_visibility"},{"id":"R2","name":"访问者必须登录且账号有效","method":"会话有效性测试","function":"check_session"},{"id":"R3","name":"公开内容也不能跨租户访问","method":"租户隔离测试","function":"check_tenant"}],
+    "cases": [
+      {"id":"T01","req":"R1","name":"他人不可查看草稿","input":{"actor":"bob","owner":"alice","role":"student","active":true,"published":false,"tenant":"a","resource_tenant":"a"},"expected":false},
+      {"id":"T02","req":"R1","name":"他人可查看已发布课程","input":{"actor":"bob","owner":"alice","role":"student","active":true,"published":true,"tenant":"a","resource_tenant":"a"},"expected":true},
+      {"id":"T03","req":"R1","name":"作者可查看草稿","input":{"actor":"alice","owner":"alice","role":"student","active":true,"published":false,"tenant":"a","resource_tenant":"a"},"expected":true},
+      {"id":"T04","req":"R1","name":"管理员可查看草稿","input":{"actor":"root","owner":"alice","role":"admin","active":true,"published":false,"tenant":"a","resource_tenant":"a"},"expected":true},
+      {"id":"T05","req":"R2","name":"匿名账号不可访问","input":{"actor":"","owner":"alice","role":"guest","active":true,"published":true,"tenant":"a","resource_tenant":"a"},"expected":false},
+      {"id":"T06","req":"R2","name":"停用账号不可访问","input":{"actor":"bob","owner":"alice","role":"student","active":false,"published":true,"tenant":"a","resource_tenant":"a"},"expected":false},
+      {"id":"T07","req":"R2","name":"有效账号可访问","input":{"actor":"bob","owner":"alice","role":"student","active":true,"published":true,"tenant":"a","resource_tenant":"a"},"expected":true},
+      {"id":"T08","req":"R2","name":"停用管理员也应拒绝","input":{"actor":"root","owner":"alice","role":"admin","active":false,"published":true,"tenant":"a","resource_tenant":"a"},"expected":false},
+      {"id":"T09","req":"R3","name":"同租户课程正常访问","input":{"actor":"alice","owner":"alice","role":"student","active":true,"published":false,"tenant":"a","resource_tenant":"a"},"expected":true},
+      {"id":"T10","req":"R3","name":"作者不能跨租户访问","input":{"actor":"alice","owner":"alice","role":"student","active":true,"published":false,"tenant":"b","resource_tenant":"a"},"expected":false},
+      {"id":"T11","req":"R3","name":"管理员也不能跨租户","input":{"actor":"root","owner":"alice","role":"admin","active":true,"published":false,"tenant":"b","resource_tenant":"a"},"expected":false},
+      {"id":"T12","req":"R3","name":"公开课程仍需租户隔离","input":{"actor":"bob","owner":"alice","role":"student","active":true,"published":true,"tenant":"b","resource_tenant":"a"},"expected":false}
+    ],
+    "mutations": [{"id":"no-auth","name":"移除会话校验","requirement":"R2","description":"如果停用账号仍能查看课程？"},{"id":"boundary","name":"移除草稿权限","requirement":"R1","description":"如果任何人都能查看未发布课程？"},{"id":"no-validation","name":"移除租户边界","requirement":"R3","description":"如果管理员可以跨学校读取内容？"}]
+  },
+  "leaderboard": {
+    "name": "游戏服务 · 排行榜反作弊验证", "short": "游戏排行榜", "description": "承接游戏开发经历的独立服务示例：验证分数边界、得分速率与提交者身份。", "tags": ["GAME SERVER", "ANTI-CHEAT", "INVARIANTS"], "file": "policies.py",
+    "requirements": [{"id":"R1","name":"分数必须为合法范围内整数","method":"数值边界测试","function":"validate_score"},{"id":"R2","name":"提交者身份必须签名且匹配","method":"身份绑定测试","function":"check_signature"},{"id":"R3","name":"得分速率不超过每秒 1000","method":"业务不变量测试","function":"check_rate"}],
+    "cases": [
+      {"id":"T01","req":"R1","name":"正常分数应通过","input":{"score":100,"seconds":10,"actor":"alice","owner":"alice","signed":true},"expected":true},
+      {"id":"T02","req":"R1","name":"拒绝负分数","input":{"score":-1,"seconds":10,"actor":"alice","owner":"alice","signed":true},"expected":false},
+      {"id":"T03","req":"R1","name":"拒绝小数分数","input":{"score":1.5,"seconds":10,"actor":"alice","owner":"alice","signed":true},"expected":false},
+      {"id":"T04","req":"R1","name":"拒绝超限分数","input":{"score":100001,"seconds":1000,"actor":"alice","owner":"alice","signed":true},"expected":false},
+      {"id":"T05","req":"R2","name":"本人签名提交通过","input":{"score":100,"seconds":10,"actor":"alice","owner":"alice","signed":true},"expected":true},
+      {"id":"T06","req":"R2","name":"拒绝未签名提交","input":{"score":100,"seconds":10,"actor":"alice","owner":"alice","signed":false},"expected":false},
+      {"id":"T07","req":"R2","name":"拒绝冒用其他玩家","input":{"score":100,"seconds":10,"actor":"bob","owner":"alice","signed":true},"expected":false},
+      {"id":"T08","req":"R2","name":"拒绝匿名提交","input":{"score":100,"seconds":10,"actor":"","owner":"alice","signed":true},"expected":false},
+      {"id":"T09","req":"R3","name":"速率恰好等于上限","input":{"score":1000,"seconds":1,"actor":"alice","owner":"alice","signed":true},"expected":true},
+      {"id":"T10","req":"R3","name":"拒绝超速得分","input":{"score":1001,"seconds":1,"actor":"alice","owner":"alice","signed":true},"expected":false},
+      {"id":"T11","req":"R3","name":"拒绝零时长","input":{"score":100,"seconds":0,"actor":"alice","owner":"alice","signed":true},"expected":false},
+      {"id":"T12","req":"R3","name":"拒绝负时长","input":{"score":100,"seconds":-1,"actor":"alice","owner":"alice","signed":true},"expected":false}
+    ],
+    "mutations": [{"id":"no-auth","name":"移除签名绑定","requirement":"R2","description":"如果玩家可以替别人提交分数？"},{"id":"boundary","name":"移除分数边界","requirement":"R1","description":"如果负数与小数也能进入排行榜？"},{"id":"no-validation","name":"移除速率限制","requirement":"R3","description":"如果一秒钟获得不可能的分数？"}]
+  }
+}

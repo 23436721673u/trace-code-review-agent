@@ -1,0 +1,1 @@
+{"name":"trace-review-agent","private":true,"version":"0.2.0","type":"module","description":"Read-only source review and delivery verification","scripts":{"start":"py -3 server.py","build":"node scripts/build-worker.mjs","check":"node --check public/app.js && node --check public/review-ui.js","test":"node --test tests/review.test.mjs"}}
